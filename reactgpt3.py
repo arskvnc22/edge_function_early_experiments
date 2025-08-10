@@ -1,7 +1,23 @@
 from openai import OpenAI
 import json
+from dotenv import load_dotenv
+import os
 
-client = OpenAI()
+load_dotenv()  
+
+api_key_open = os.getenv("OPENAI_API_KEY")
+print(f"api_key_open: {api_key_open}")
+client = OpenAI(
+     api_key = api_key_open,
+    #  project = "Default project",
+)
+if api_key_open:
+    # Print the first 7 and last 4 characters to verify without exposing the full key
+    print("API Key Loaded Successfully.")
+    print(f"   Using key starting with: {api_key_open[:7]}... and ending with: ...{api_key_open[-4:]}")
+else:
+    print("ERROR: OpenAI API Key not found. Check your .env file and variable name.")
+
 class Agent:
     def __init__(self, client, system_message, name):
         self.name = name
@@ -145,6 +161,7 @@ def main():
             
         question = "What is the mass of Earth times 2?"
         response = neil_tyson_agent(question)
+        print(f"response {response}")
         print(f"neil_tyson_agent.input_list: {neil_tyson_agent.input_list}")
 
 if __name__ == "__main__":
