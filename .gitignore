@@ -7,6 +7,8 @@ __pycache__/
 *.so
 Phi-3-mini-4k-instruct.Q4_K_M.gguf
 /.history/
+gemini.md
+package-lock.json
 # Distribution / packaging
 .Python
 build/

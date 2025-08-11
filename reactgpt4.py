@@ -32,23 +32,34 @@ class Agent:
         if user_query:
              self.input_list.append({"role": "user", "content": user_query})
         result = self.execute()
+        print("*************************")
+        print("result:")
+        print("result:")
+        print("*************************")
+        print (result)
+        print("*************************")
+        print("result:")
+        print("result:")
+        print("*************************")
         #self.input_list.append({"role": "user", "content": user_query})
-        for item in result.output:
-             if item.type == "message":
-                for part in item.content:
-                     if part.type == "output_text":
-                          print(f"assistant: {part.text}")
-                          self.input_list.append({"role": "assistant", "content": part.text})
+        assistant_message = result.choices[0].message.content
+        print(f"assistant_message: {assistant_message}")
+        self.input_list.append({"role": "assistant", "content": assistant_message})
 
         return result
     def execute(self):
-        response = self.client.responses.create(
+        response = self.client.chat.completions.create(
             model = "gpt-4o",
             #tools = self.tools,
-            input = self.input_list,
+            messages = self.input_list,
         )
         print("Response from execute:")
         print(response.model_dump_json(indent=2))
+        print("*************************")
+        print("*************************")
+        print (self.input_list)
+        print("*************************")
+        print("*************************")
 
         return response
 system_prompt = """
@@ -61,7 +72,9 @@ Use PAUSE to indicate youre turn is over.
 Use Action to run one of the actions available to you. Then output what the next step should be - then return PAUSE.
 You will be called again with the output of the action you ran, which is called Observation.
 Observation will be the result of running those actions.
+**IMPORTANT** :
 
+DO NOT output everything at once, only output Thought, you will be prompted again.
 Your available actions are:
 
 calculate:
@@ -74,45 +87,51 @@ returns weight of the planet in kg
 
 Example session:
 
+User:
 Question: What is the mass of Earth times 2?
 
-
+Assistant:
 Thought: I need to find the mass of Earth
 PAUSE
 
 You will be called again with this:
-
+User:
 Observation: OK
-
+Assistant:
 Action: get_planet_mass: Earth
 PAUSE 
 
 
 You will be called again with this:
-
+User:
 Observation: 5.972e24
 
+Assistant:
 Thought: I need to multiply this by 2
 PAUSE
 
 
 You will be called again with this:
-
+User:
 Observation: OK
 
+Assistant:
 Action: calculate: 5.972e24 * 2
 PAUSE
 
 
 You will be called again with this:             
 
+User:
 Observation: 1,1944×10e25
 
+Assistant:
 Thought: I have the mass of Earth times 2, which is 1,1944×10e25. I will output this as the final answer.
 PAUSE
 
+User:
 Observation: OK
-
+Assistant:
 Action: <FINISH>: The mass of Earth times 2 is 1,1944×10e25.
 PAUSE
 
@@ -190,30 +209,31 @@ def while_loop(initial_prompt):
         iternum += 1
         print(f"\nIteration {iternum} of {maxiternum}")
         
-        for item in response.output:
-            if item.type == "message":
-                for part in item.content:
-                    if part.type == "output_text" and item.role == "assistant":
-                        if part.text.startswith("Thought:"):
-                            next_prompt = "Observation: OK"
-                        elif part.text.startswith("Action:"):
-                            action = re.findall(r"Action: ([a-z_]+): (.+)", part.text, re.IGNORECASE)
-                            print(f"Action to perform: {action}")
-                            chosen_tool = action[0][0]
-                            arg = action[0][1]
-                            print(f"Chosen tool: {chosen_tool}, Argument: {arg}")
-                            if chosen_tool in tools:
-                                if chosen_tool == "calculate":
-                                    action_result = calculate(arg)
-                                    next_prompt = f"Observation: {action_result}"
-                                elif chosen_tool == "get_planet_mass":
-                                    action_result = get_planet_mass(arg)
-                                    next_prompt = f"Observation: {action_result}"
+        message = response.choices[0].message
+        role = message.role  # "assistant" or "user"
+        content = message.content
+        if role == "assistant":
+            
+            if content.startswith("Thought:"):
+                next_prompt = "Observation: OK"
+            elif content.startswith("Action:"):
+                action = re.findall(r"Action: ([a-z_]+): (.+)", content, re.IGNORECASE)
+                print(f"Action to perform: {action}")
+                chosen_tool = action[0][0]
+                arg = action[0][1]
+                print(f"Chosen tool: {chosen_tool}, Argument: {arg}")
+                if chosen_tool in tools:
+                    if chosen_tool == "calculate":
+                        action_result = calculate(arg)
+                        next_prompt = f"Observation: {action_result}"
+                    elif chosen_tool == "get_planet_mass":
+                        action_result = get_planet_mass(arg)
+                        next_prompt = f"Observation: {action_result}"
 
-                        
-                        if "<FINISH>" in part.text:
-                            print("Final Answer:", part.text.replace("Answer:", "").strip())
-                            finish = True
+            
+            if "<FINISH>" in content:
+                print("Final Answer:", content.text.replace("Answer:", "").strip())
+                finish = True
 
     print("\nConversation History:")
     for message in neil_tyson_agent.input_list:
